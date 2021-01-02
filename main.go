@@ -2,17 +2,16 @@ package main
 
 import (
 	"github.com/team-zf/framework/Route"
-	"github.com/team-zf/framework/app"
 	"github.com/team-zf/framework/modules"
 	"time"
 )
 
 func main() {
 	app := CreateApp(
-		app.AppSetDebug(true),
-		app.AppSetParse(true),
-		app.AppSetTableDir("./JSON"),
-		app.AppSetPStatusTime(3*time.Second),
+		modules.AppSetDebug(true),
+		modules.AppSetParse(true),
+		modules.AppSetTableDir("./JSON"),
+		modules.AppSetPStatusTime(3*time.Second),
 	)
 	app.AddModule(modules.NewHttpModule(
 		modules.HttpSetRoute(Route.HttpRoute),
@@ -21,6 +20,6 @@ func main() {
 	app.Run()
 }
 
-func CreateApp(opts ...app.Options) app.IApp {
-	return app.NewDefaultApp(opts...)
+func CreateApp(opts ...modules.AppOptions) modules.IApp {
+	return modules.NewApp(opts...)
 }

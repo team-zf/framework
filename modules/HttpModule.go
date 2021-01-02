@@ -169,7 +169,7 @@ func (e *HttpModule) defaultTimeoutFunc(msg messages.IHttpMessageHandle, res htt
 	res.Write([]byte("timeout Run!"))
 }
 
-func NewHttpModule(opts ...Options) *HttpModule {
+func NewHttpModule(opts ...ModOptions) *HttpModule {
 	result := &HttpModule{
 		ipPort:      ":8080",
 		timeout:     30 * time.Second,
@@ -185,28 +185,28 @@ func NewHttpModule(opts ...Options) *HttpModule {
 }
 
 // 设置Web地址
-func HttpSetIpPort(ipPort string) Options {
+func HttpSetIpPort(ipPort string) ModOptions {
 	return func(mod IModule) {
 		mod.(*HttpModule).ipPort = ipPort
 	}
 }
 
 // 设置超时时间
-func HttpSetTimeout(timeout time.Duration) Options {
+func HttpSetTimeout(timeout time.Duration) ModOptions {
 	return func(mod IModule) {
 		mod.(*HttpModule).timeout = timeout * time.Second
 	}
 }
 
 // 设置超时回调方法
-func HttpSetTimeoutFunc(timeoutfunc func(messages.IHttpMessageHandle, http.ResponseWriter, *http.Request)) Options {
+func HttpSetTimeoutFunc(timeoutfunc func(messages.IHttpMessageHandle, http.ResponseWriter, *http.Request)) ModOptions {
 	return func(mod IModule) {
 		mod.(*HttpModule).timeoutFun = timeoutfunc
 	}
 }
 
 // 设置路由
-func HttpSetRoute(route messages.IMessageHandle) Options {
+func HttpSetRoute(route messages.IMessageHandle) ModOptions {
 	return func(mod IModule) {
 		mod.(*HttpModule).RouteHandle = route
 	}

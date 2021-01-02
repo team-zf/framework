@@ -20,16 +20,6 @@ type IMessageHandle interface {
 	CheckMaxLenVaild(buff []byte) (msglen uint32, ok bool)
 }
 
-type options func(msghandle IMessageHandle)
-
-// 路由消息接口
-type IGateMessage interface {
-	// 编码，传出编码的数据和数据的长度
-	GateMarshal() ([]byte, uint32)
-	// 解码,传入数据，传出使用后剩下的数据，和使用了多少字节
-	GateUnmarshal(buff []byte) ([]byte, uint32)
-}
-
 type IMessage interface {
 	GetCmd() uint32
 	Header() string
@@ -47,4 +37,15 @@ type IWebSocketMessageHandle interface {
 	IMessage
 	// WebSocket的回调
 	WebSocketDirectCall(*model.WebSocketModel)
+}
+
+type IDataBaseMessage interface {
+	// 所在DB协程
+	DBThreadID() int
+	// 数据表,如果你的表放入时，不是马上保存的，那么后续可以用这个KEY来进行覆盖，
+	// 这样就可以实现多次修改一次保存的功能
+	// 所以这个字段建议是：用户ID+数据表名+数据主键
+	GetDataKey() string
+	// 调用方法
+	SaveDB() error
 }

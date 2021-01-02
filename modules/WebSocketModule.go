@@ -172,7 +172,7 @@ func (e *WebSocketModule) Handle(conn *websocket.Conn) {
 	)
 }
 
-func NewWebSocketModule(opts ...Options) *WebSocketModule {
+func NewWebSocketModule(opts ...ModOptions) *WebSocketModule {
 	result := &WebSocketModule{
 		ipPort:             ":8081",
 		timeout:            60 * time.Second,

@@ -1,6 +1,8 @@
 package messages
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type HttpMessage struct {
 	Cmd    uint32                 `json:"cmd"`

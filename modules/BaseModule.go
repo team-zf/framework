@@ -12,4 +12,15 @@ type IModule interface {
 	PrintStatus() string
 }
 
-type Options func(mod IModule)
+type IApp interface {
+	Run()
+	AddModule(mds ...IModule)
+	OnConfigurationLoaded(fn func(app IApp))
+	OnTablesLoaded(fn func(app IApp))
+	OnStartup(fn func(app IApp))
+	OnStoped(fn func(app IApp))
+}
+
+type AppOptions func(app IApp)
+
+type ModOptions func(mod IModule)
