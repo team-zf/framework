@@ -1,0 +1,26 @@
+{
+    "Settings": {},
+    "Logger": {
+        "File": {
+            "prefix": "test",
+            "daily": true,
+            "level": 7
+        }
+    },
+    "Table": {
+
+    },
+    "MySql": {
+        "Dsn": "wuxia:20200418@tcp(47.106.246.70:3306)/wuxia_account?charset=utf8mb4&parseTime=true&loc=Local",
+        "MaxOpenNum": 100,
+        "MaxIdleNum": 50,
+        "MaxLifetime": 600
+    },
+    "Redis": {
+        "Addr": "47.106.246.70:6379",
+        "MaxActive": 1000,
+        "MaxIdle": 50,
+        "IdleTimeout": 600,
+        "Password": "20200418"
+    }
+}
