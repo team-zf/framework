@@ -54,7 +54,7 @@ func (e *WebSocketModule) Start() {
 
 func (e *WebSocketModule) Stop() {
 	if err := e.httpServer.Close(); err != nil {
-		logger.Error("Close Web Module; %v", err)
+		logger.Error("Close WebSocket Module; %v", err)
 	}
 	e.thgo.CloseWait()
 	logger.Notice("WebSocket Module Stop.")

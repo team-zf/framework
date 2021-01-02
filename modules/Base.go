@@ -1,5 +1,10 @@
 package modules
 
+import (
+	"database/sql"
+	"github.com/team-zf/framework/config"
+)
+
 // IModule 模块接口
 type IModule interface {
 	// Init 初始化
@@ -13,12 +18,19 @@ type IModule interface {
 }
 
 type IApp interface {
-	Run()
-	AddModule(mds ...IModule)
-	OnConfigurationLoaded(fn func(app IApp))
+	Init() IApp
+	Run(mds ...IModule) IApp
+	AddModule(mds ...IModule) IApp
+	OnConfigurationLoaded(fn func(app IApp, conf *config.AppConfig))
 	OnTablesLoaded(fn func(app IApp))
 	OnStartup(fn func(app IApp))
 	OnStoped(fn func(app IApp))
+	GetConfig() *config.AppConfig
+}
+
+type IDataBaseModule interface {
+	IModule
+	GetDB() *sql.DB
 }
 
 type AppOptions func(app IApp)

@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/team-zf/framework/config"
 	"github.com/team-zf/framework/logger"
 	"github.com/team-zf/framework/messages"
 	"github.com/team-zf/framework/utils/threads"
@@ -13,7 +15,8 @@ import (
 )
 
 type DataBaseModule struct {
-	conn      *sql.DB                          // 数据库连接对象
+	conf      *config.MySqlConfig
+	db        *sql.DB
 	chanNum   int                              // 通道缓存空间
 	timeout   time.Duration                    // 超时时长
 	logicList map[int]*DataBaseThread          //子逻辑列表
@@ -25,19 +28,34 @@ type DataBaseModule struct {
 }
 
 func (e *DataBaseModule) Init() {
+	db, err := sql.Open("mysql", e.conf.Dsn)
+	if err != nil {
+		panic(fmt.Sprintf("Mysql连接失败, 错误原因: %+v", err))
+	}
+	db.SetMaxOpenConns(e.conf.MaxOpenNum)
+	db.SetMaxIdleConns(e.conf.MaxIdleNum)
+	db.SetConnMaxLifetime(e.conf.MaxLifetime * time.Second)
+	if err = db.Ping(); err != nil {
+		panic(fmt.Sprintf("Mysql尝Ping失败, 错误原因: %+v", err))
+	}
+	e.db = db
 	e.chanList = make(chan []messages.IDataBaseMessage, e.chanNum)
 }
 
 func (e *DataBaseModule) Start() {
-	e.thgo.Go(e.Handle)
+	e.thgo.Go(func(ctx context.Context) {
+		logger.Notice("DataBase Module Start.")
+	})
 }
 
 func (e *DataBaseModule) Stop() {
 	close(e.chanList)
+	e.db.Close()
 	e.thgo.CloseWait()
+	logger.Notice("DataBase Module Stop.")
 }
 
-func (e *DataBaseModule) PrintStats() string {
+func (e *DataBaseModule) PrintStatus() string {
 	return fmt.Sprintf(
 		"\r\n\t\tDataBase Module\t:%d/%d/%d\t(logic/get/save)",
 		len(e.logicList),
@@ -86,6 +104,38 @@ func (e *DataBaseModule) Handle(ctx context.Context) {
 			}
 			loop++
 		}
+	}
+}
+
+func (e *DataBaseModule) GetDB() *sql.DB {
+	return e.db
+}
+
+func NewDataBaseModule(opts ...ModOptions) *DataBaseModule {
+	result := &DataBaseModule{
+		conf: &config.MySqlConfig{
+			Dsn:         "",
+			MaxOpenNum:  100,
+			MaxIdleNum:  50,
+			MaxLifetime: 600,
+		},
+		chanNum:   1024,
+		timeout:   2 * time.Minute,
+		logicList: make(map[int]*DataBaseThread, 1),
+		keyList:   make([]int, 0),
+		getNum:    0,
+		saveNum:   0,
+		thgo:      threads.NewThreadGo(),
+	}
+	for _, opt := range opts {
+		opt(result)
+	}
+	return result
+}
+
+func DataBaseSetConf(v *config.MySqlConfig) ModOptions {
+	return func(mod IModule) {
+		mod.(*DataBaseModule).conf = v
 	}
 }
 

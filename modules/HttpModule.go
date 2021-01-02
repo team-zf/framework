@@ -38,7 +38,7 @@ func (e *HttpModule) Init() {
 
 func (e *HttpModule) Start() {
 	e.thgo.Go(func(ctx context.Context) {
-		logger.Notice("Web Module Start.")
+		logger.Notice("Http Module Start.")
 		err := e.httpServer.ListenAndServe()
 		if err != nil {
 			if err != http.ErrServerClosed {
@@ -50,10 +50,10 @@ func (e *HttpModule) Start() {
 
 func (e *HttpModule) Stop() {
 	if err := e.httpServer.Close(); err != nil {
-		logger.Error("Close Web Module; %v", err)
+		logger.Error("Close Http Module; %v", err)
 	}
 	e.thgo.CloseWait()
-	logger.Notice("Web Module Stop.")
+	logger.Notice("Http Module Stop.")
 }
 
 func (e *HttpModule) PrintStatus() string {

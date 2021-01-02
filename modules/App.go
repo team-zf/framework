@@ -23,13 +23,13 @@ type App struct {
 	tableDir                  string
 	started                   bool
 	modules                   []IModule
-	event_configurationLoaded func(app IApp)
+	event_configurationLoaded func(app IApp, conf *config.AppConfig)
 	event_tablesLoaded        func(app IApp)
 	event_startup             func(app IApp)
 	event_stoped              func(app IApp)
 }
 
-func (e *App) Init() {
+func (e *App) Init() IApp {
 	if e.parse {
 		confPath := flag.String("c", "", "配置文件路径")
 		logDir := flag.String("l", "", "日志文件目录")
@@ -50,6 +50,9 @@ func (e *App) Init() {
 	if e.logDir != "" {
 		utils.Mkdir(e.logDir)
 	}
+	e.loadConfig()
+	e.loadTables()
+	return e
 }
 
 func (e *App) loadConfig() {
@@ -65,7 +68,7 @@ func (e *App) loadConfig() {
 
 	logger.Init(e.debug, e.logDir, e.config.Logger)
 	if e.event_configurationLoaded != nil {
-		e.event_configurationLoaded(e)
+		e.event_configurationLoaded(e, e.config)
 	}
 }
 
@@ -79,10 +82,10 @@ func (e *App) loadTables() {
 	}
 }
 
-func (e *App) Run() {
-	e.Init()
-	e.loadConfig()
-	e.loadTables()
+func (e *App) Run(mds ...IModule) IApp {
+	if len(mds) > 0 {
+		e.AddModule(mds...)
+	}
 
 	e.started = true
 	for _, md := range e.modules {
@@ -119,16 +122,18 @@ Pstatus:
 		md.Stop()
 	}
 	logger.Close()
+	return e
 }
 
-func (e *App) AddModule(mds ...IModule) {
+func (e *App) AddModule(mds ...IModule) IApp {
 	e.modules = append(e.modules, mds...)
 	for _, md := range mds {
 		md.Init()
 	}
+	return e
 }
 
-func (e *App) OnConfigurationLoaded(fn func(app IApp)) {
+func (e *App) OnConfigurationLoaded(fn func(app IApp, conf *config.AppConfig)) {
 	e.event_configurationLoaded = fn
 }
 
@@ -142,6 +147,10 @@ func (e *App) OnStartup(fn func(app IApp)) {
 
 func (e *App) OnStoped(fn func(app IApp)) {
 	e.event_stoped = fn
+}
+
+func (e *App) GetConfig() *config.AppConfig {
+	return e.config
 }
 
 func NewApp(opts ...AppOptions) *App {
