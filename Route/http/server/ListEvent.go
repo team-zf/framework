@@ -1,11 +1,13 @@
 package http_server
 
 import (
+	"github.com/team-zf/framework/Data"
+	"github.com/team-zf/framework/Table"
 	"github.com/team-zf/framework/logger"
 	"github.com/team-zf/framework/messages"
 	"github.com/team-zf/framework/utils"
 	"net/http"
-	"time"
+	"strings"
 )
 
 type ListEvent struct {
@@ -19,9 +21,45 @@ func (e *ListEvent) Parse() {
 }
 
 func (e *ListEvent) HttpDirectCall(req *http.Request, resp *messages.HttpResponse) {
-	logger.Debug("Token: %s", e.Token)
+	account := Data.GetAccountByToken(e.Token)
 
-	time.Sleep(time.Second * 4)
+	// Token错误
+	if account == nil {
+		logger.Debug("Token错误")
+		return
+	}
+
+	serverList := Data.GetServerList()
+	serverIds := strings.Split(account.LatelyServer, ",")
+
+	latelyList := make([]*Table.Server, 0)
+	for _, sid := range serverIds {
+		for _, server := range serverList {
+			if string(server.Id) == sid {
+				latelyList = append(latelyList, server)
+				break
+			}
+		}
+	}
+
+	// 最近登录的服务器列表
+	if len(latelyList) > 0 {
+		mlist := make([]map[string]interface{}, 0)
+		for _, item := range latelyList {
+			mlist = append(mlist, item.ToJsonMap())
+		}
+		resp.Data["lately"] = mlist
+	}
+	// 所有服务器列表
+	if len(serverList) > 0 {
+		mlist := make([]map[string]interface{}, 0)
+		for _, item := range serverList {
+			mlist = append(mlist, item.ToJsonMap())
+		}
+		resp.Data["list"] = mlist
+	}
+
+	resp.Code = messages.RC_Success
 	return
 }
 

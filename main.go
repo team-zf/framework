@@ -8,9 +8,6 @@ import (
 	"time"
 )
 
-func init() {
-}
-
 func main() {
 	Control.App = CreateApp(
 		modules.AppSetDebug(true),
@@ -20,10 +17,10 @@ func main() {
 	)
 	Control.App.OnConfigurationLoaded(func(app modules.IApp, conf *config.AppConfig) {
 		// 载入数据库模块
-		Control.DB = modules.NewDataBaseModule(
+		Control.DbModule = modules.NewDataBaseModule(
 			modules.DataBaseSetConf(conf.MySql),
 		)
-		app.AddModule(Control.DB)
+		app.AddModule(Control.DbModule)
 	})
 	Control.App.Init()
 

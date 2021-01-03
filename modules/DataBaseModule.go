@@ -111,6 +111,18 @@ func (e *DataBaseModule) GetDB() *sql.DB {
 	return e.db
 }
 
+func (e *DataBaseModule) QueryRow(query string, args ...interface{}) *sql.Row {
+	return e.db.QueryRow(query, args...)
+}
+
+func (e *DataBaseModule) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return e.db.Query(query, args...)
+}
+
+func (e *DataBaseModule) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return e.db.Exec(query, args...)
+}
+
 func NewDataBaseModule(opts ...ModOptions) *DataBaseModule {
 	result := &DataBaseModule{
 		conf: &config.MySqlConfig{

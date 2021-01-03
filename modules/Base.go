@@ -31,6 +31,9 @@ type IApp interface {
 type IDataBaseModule interface {
 	IModule
 	GetDB() *sql.DB
+	QueryRow(query string, args ...interface{}) *sql.Row
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
 type AppOptions func(app IApp)
