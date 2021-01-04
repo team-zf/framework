@@ -18,13 +18,13 @@ func (e *HttpMessage) Header() string {
 }
 
 type HttpResponse struct {
-	Code int                    `json:"code"`
+	Code uint32                 `json:"code"`
 	Data map[string]interface{} `json:"data"`
 }
 
 type Options func(resp *HttpResponse)
 
-func ResponseSetCode(v int) Options {
+func ResponseSetCode(v uint32) Options {
 	return func(resp *HttpResponse) {
 		resp.Code = v
 	}
@@ -48,7 +48,7 @@ func NewHttpResponse(opts ...Options) *HttpResponse {
 	return resp
 }
 
-func NewCodeHttpResponse(code int) *HttpResponse {
+func NewCodeHttpResponse(code uint32) *HttpResponse {
 	return &HttpResponse{
 		Code: code,
 		Data: make(map[string]interface{}),
