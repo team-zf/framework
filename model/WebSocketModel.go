@@ -2,6 +2,9 @@ package model
 
 import "golang.org/x/net/websocket"
 
+type IWebSocketModel interface {
+}
+
 type WebSocketModel struct {
 	Conn     *websocket.Conn
 	CloseFun func(wsmd *WebSocketModel) // 关闭连接时的方法

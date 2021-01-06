@@ -35,8 +35,10 @@ type IHttpMessageHandle interface {
 
 type IWebSocketMessageHandle interface {
 	IMessage
+	// 解析参数
+	Parse()
 	// WebSocket的回调
-	WebSocketDirectCall(*model.WebSocketModel)
+	WebSocketDirectCall(wsmd *model.WebSocketModel, resp *WebSocketResponse)
 }
 
 type IDataBaseMessage interface {

@@ -23,10 +23,10 @@ type App struct {
 	tableDir                  string
 	started                   bool
 	modules                   []IModule
-	event_configurationLoaded func(app IApp, conf *config.AppConfig)
-	event_tablesLoaded        func(app IApp)
-	event_startup             func(app IApp)
-	event_stoped              func(app IApp)
+	event_ConfigurationLoaded func(app IApp, conf *config.AppConfig)
+	event_TablesLoaded        func(app IApp)
+	event_Startup             func(app IApp)
+	event_Stoped              func(app IApp)
 }
 
 func (e *App) Init() IApp {
@@ -67,8 +67,8 @@ func (e *App) loadConfig() {
 	}
 
 	logger.Init(e.debug, e.logDir, e.config.Logger)
-	if e.event_configurationLoaded != nil {
-		e.event_configurationLoaded(e, e.config)
+	if e.event_ConfigurationLoaded != nil {
+		e.event_ConfigurationLoaded(e, e.config)
 	}
 }
 
@@ -77,8 +77,8 @@ func (e *App) loadTables() {
 		return
 	}
 	tables.LoadTables(e.tableDir, e.config.Table)
-	if e.event_tablesLoaded != nil {
-		e.event_tablesLoaded(e)
+	if e.event_TablesLoaded != nil {
+		e.event_TablesLoaded(e)
 	}
 }
 
@@ -91,8 +91,8 @@ func (e *App) Run(mds ...IModule) IApp {
 	for _, md := range e.modules {
 		md.Start()
 	}
-	if e.event_startup != nil {
-		e.event_startup(e)
+	if e.event_Startup != nil {
+		e.event_Startup(e)
 	}
 
 	// 这里要柱塞等关闭
@@ -114,8 +114,8 @@ Pstatus:
 		}
 	}
 	e.started = false
-	if e.event_stoped != nil {
-		e.event_stoped(e)
+	if e.event_Stoped != nil {
+		e.event_Stoped(e)
 	}
 	for i := len(e.modules) - 1; i >= 0; i-- {
 		md := e.modules[i]
@@ -134,19 +134,19 @@ func (e *App) AddModule(mds ...IModule) IApp {
 }
 
 func (e *App) OnConfigurationLoaded(fn func(app IApp, conf *config.AppConfig)) {
-	e.event_configurationLoaded = fn
+	e.event_ConfigurationLoaded = fn
 }
 
 func (e *App) OnTablesLoaded(fn func(app IApp)) {
-	e.event_tablesLoaded = fn
+	e.event_TablesLoaded = fn
 }
 
 func (e *App) OnStartup(fn func(app IApp)) {
-	e.event_startup = fn
+	e.event_Startup = fn
 }
 
 func (e *App) OnStoped(fn func(app IApp)) {
-	e.event_stoped = fn
+	e.event_Stoped = fn
 }
 
 func (e *App) GetConfig() *config.AppConfig {

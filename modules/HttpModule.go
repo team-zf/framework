@@ -68,9 +68,6 @@ func (e *HttpModule) Handle(res http.ResponseWriter, req *http.Request) {
 
 	e.thgo.Wg.Add(1)
 	defer e.thgo.Wg.Done()
-	atomic.AddInt64(&e.getnum, 1)
-	atomic.AddInt64(&e.runing, 1)
-	defer atomic.AddInt64(&e.runing, -1)
 
 	bytes, _ := ioutil.ReadAll(req.Body)
 	msg, err := e.RouteHandle.Unmarshal(bytes)
@@ -85,6 +82,10 @@ func (e *HttpModule) Handle(res http.ResponseWriter, req *http.Request) {
 	} else {
 		logger.Notice("http Get Msg: %s", handle.Header())
 	}
+
+	atomic.AddInt64(&e.getnum, 1)
+	atomic.AddInt64(&e.runing, 1)
+	defer atomic.AddInt64(&e.runing, -1)
 
 	utils.QueueRun(
 		// 检测参数
@@ -103,9 +104,9 @@ func (e *HttpModule) queueParse(handle messages.IHttpMessageHandle, res http.Res
 			},
 			func(err error) {
 				result = false
-				resp := messages.NewHttpResponse(
-					messages.ResponseSetCode(messages.RC_Param_Error),
-				)
+				resp := &messages.HttpResponse{
+					Code: messages.RC_Param_Error,
+				}
 				if bytes, err := e.RouteHandle.Marshal(resp); err == nil {
 					res.Write(bytes)
 				}
@@ -122,18 +123,18 @@ func (e *HttpModule) queueCall(handle messages.IHttpMessageHandle, res http.Resp
 			func() {
 				t := time.NewTimer(e.timeout - 2*time.Second)
 				g := threads.NewGoRun(func() {
-					resp := messages.NewHttpResponse()
+					resp := &messages.HttpResponse{}
 					threads.Try(
 						func() {
 							handle.HttpDirectCall(req, resp)
 						},
 						func(err error) {
-							logger.Error("%s; Logic Error: %+v", handle.Header(), err)
+							logger.Error("%s; 逻辑报错: %+v", handle.Header(), err)
 							resp.Code = messages.RC_LOGIC_ERROR
 						},
 						func() {
-							if bytes, err := e.RouteHandle.Marshal(resp); err == nil {
-								res.Write(bytes)
+							if data, err := e.RouteHandle.Marshal(resp); err == nil {
+								res.Write(data)
 							}
 						},
 					)
@@ -145,7 +146,7 @@ func (e *HttpModule) queueCall(handle messages.IHttpMessageHandle, res http.Resp
 					break
 				// 业务逻辑超时
 				case <-t.C:
-					logger.Debug("http Timeout msg: %+v", handle.GetCmd())
+					logger.Debug("逻辑超时: %s", handle.Header())
 					if e.timeoutFun != nil {
 						e.timeoutFun(handle, res, req)
 					} else {
