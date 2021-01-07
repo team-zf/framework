@@ -1,6 +1,7 @@
 package dal
 
 import (
+	"database/sql"
 	"github.com/team-zf/framework/utils"
 	"reflect"
 	"strings"
@@ -9,6 +10,10 @@ import (
 type ITable interface {
 	GetId() int64
 	GetTableName() string
+}
+
+type IConnDB interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
 // 生成Insert&Update语句, SQL

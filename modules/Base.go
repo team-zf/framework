@@ -3,6 +3,7 @@ package modules
 import (
 	"database/sql"
 	"github.com/team-zf/framework/config"
+	"github.com/team-zf/framework/messages"
 )
 
 // IModule 模块接口
@@ -30,6 +31,7 @@ type IApp interface {
 
 type IDataBaseModule interface {
 	IModule
+	AddMsg(msgs ...messages.IDataBaseMessage)
 	GetDB() *sql.DB
 	QueryRow(query string, args ...interface{}) *sql.Row
 	Query(query string, args ...interface{}) (*sql.Rows, error)

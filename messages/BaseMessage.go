@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"github.com/team-zf/framework/dal"
 	"github.com/team-zf/framework/model"
 	"net/http"
 )
@@ -49,5 +50,5 @@ type IDataBaseMessage interface {
 	// 所以这个字段建议是：用户ID+数据表名+数据主键
 	GetDataKey() string
 	// 调用方法
-	SaveDB() error
+	SaveDB(db dal.IConnDB) error
 }

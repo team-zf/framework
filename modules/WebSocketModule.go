@@ -85,17 +85,17 @@ func (e *WebSocketModule) Handle(conn *websocket.Conn) {
 		e.event_WebSocketOnline(wsmd)
 	}
 	atomic.AddInt64(&e.connlen, 1)
-	logger.Info("WebSocket Client Open: %+v .", wsmd.KeyID, wsmd.ConInfo)
+	logger.Info("WebSocket Client Open: KeyID(%d) %+v .", wsmd.KeyID, wsmd.ConInfo)
 
 	// 发消息来说明这个用户掉线了
 	defer func() {
 		atomic.AddInt64(&e.connlen, -1)
-		logger.Info("WebSocket Client Closeing: %+v .", wsmd.KeyID, wsmd.ConInfo)
+		logger.Info("WebSocket Client Closeing: KeyID(%d) %+v .", wsmd.KeyID, wsmd.ConInfo)
 		// 用来处理发生连接关闭的时候，要处理的事
 		if wsmd.CloseFun != nil {
 			wsmd.CloseFun(wsmd)
 		}
-		logger.Info("WebSocket Client Close: %+v .", wsmd.KeyID, wsmd.ConInfo)
+		logger.Info("WebSocket Client Close: KeyID(%d) %+v .", wsmd.KeyID, wsmd.ConInfo)
 	}()
 
 	// 心跳
@@ -154,7 +154,7 @@ func (e *WebSocketModule) Handle(conn *websocket.Conn) {
 					logger.Info("Not is WebSocket Msg: %+v", msg)
 					return
 				} else {
-					logger.Info("WebSocket Get Msg: %+v", msg)
+					logger.Info("WebSocket Get Msg: %s", handle.Header())
 				}
 
 				runchan <- true
@@ -183,6 +183,7 @@ func (e *WebSocketModule) queueParse(handle messages.IWebSocketMessageHandle, ws
 			func(err error) {
 				result = false
 				resp := &messages.WebSocketResponse{
+					Cmd:  handle.GetCmd(),
 					Code: messages.RC_Param_Error,
 				}
 				if data, err := e.RouteHandle.Marshal(resp); err == nil {
@@ -201,7 +202,10 @@ func (e *WebSocketModule) queueCall(handle messages.IWebSocketMessageHandle, wsm
 			func() {
 				t := time.NewTimer(5 * time.Second)
 				g := threads.NewGoRun(func() {
-					resp := &messages.WebSocketResponse{}
+					resp := &messages.WebSocketResponse{
+						Cmd:  handle.GetCmd(),
+						Data: make(map[string]interface{}),
+					}
 					threads.Try(
 						func() {
 							handle.WebSocketDirectCall(wsmd, resp)

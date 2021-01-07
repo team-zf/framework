@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/team-zf/framework/config"
 	"github.com/team-zf/framework/logger"
 	"github.com/team-zf/framework/messages"
 	"github.com/team-zf/framework/utils/threads"
@@ -15,7 +14,7 @@ import (
 )
 
 type DataBaseModule struct {
-	conf      *config.MySqlConfig
+	dsn       string
 	db        *sql.DB
 	chanNum   int                              // 通道缓存空间
 	timeout   time.Duration                    // 超时时长
@@ -28,13 +27,13 @@ type DataBaseModule struct {
 }
 
 func (e *DataBaseModule) Init() {
-	db, err := sql.Open("mysql", e.conf.Dsn)
+	db, err := sql.Open("mysql", e.dsn)
 	if err != nil {
 		panic(fmt.Sprintf("Mysql连接失败, 错误原因: %+v", err))
 	}
-	db.SetMaxOpenConns(e.conf.MaxOpenNum)
-	db.SetMaxIdleConns(e.conf.MaxIdleNum)
-	db.SetConnMaxLifetime(e.conf.MaxLifetime * time.Second)
+	db.SetMaxOpenConns(100)
+	db.SetMaxIdleConns(50)
+	db.SetConnMaxLifetime(600 * time.Second)
 	if err = db.Ping(); err != nil {
 		panic(fmt.Sprintf("Mysql尝Ping失败, 错误原因: %+v", err))
 	}
@@ -107,6 +106,11 @@ func (e *DataBaseModule) Handle(ctx context.Context) {
 	}
 }
 
+func (e *DataBaseModule) AddMsg(msgs ...messages.IDataBaseMessage) {
+	atomic.AddInt64(&e.getNum, 1)
+	e.chanList <- msgs
+}
+
 func (e *DataBaseModule) GetDB() *sql.DB {
 	return e.db
 }
@@ -125,12 +129,6 @@ func (e *DataBaseModule) Exec(query string, args ...interface{}) (sql.Result, er
 
 func NewDataBaseModule(opts ...ModOptions) *DataBaseModule {
 	result := &DataBaseModule{
-		conf: &config.MySqlConfig{
-			Dsn:         "",
-			MaxOpenNum:  100,
-			MaxIdleNum:  50,
-			MaxLifetime: 600,
-		},
 		chanNum:   1024,
 		timeout:   2 * time.Minute,
 		logicList: make(map[int]*DataBaseThread, 1),
@@ -145,9 +143,9 @@ func NewDataBaseModule(opts ...ModOptions) *DataBaseModule {
 	return result
 }
 
-func DataBaseSetConf(v *config.MySqlConfig) ModOptions {
+func DataBaseSetDsn(v string) ModOptions {
 	return func(mod IModule) {
-		mod.(*DataBaseModule).conf = v
+		mod.(*DataBaseModule).dsn = v
 	}
 }
 
@@ -186,7 +184,7 @@ func (e *DataBaseThread) Save() {
 		threads.Try(
 			func() {
 				for _, data := range e.upDataList {
-					if err = data.SaveDB(); err != nil {
+					if err = data.SaveDB(tx); err != nil {
 						panic(errors.New(fmt.Sprintf("keyid: %d; DataKey: %s", data.DBThreadID(), data.GetDataKey())))
 					}
 				}
