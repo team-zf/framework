@@ -123,7 +123,9 @@ func (e *HttpModule) queueCall(handle messages.IHttpMessageHandle, res http.Resp
 			func() {
 				t := time.NewTimer(e.timeout - 2*time.Second)
 				g := threads.NewGoRun(func() {
-					resp := &messages.HttpResponse{}
+					resp := &messages.HttpResponse{
+						Data: make(map[string]interface{}),
+					}
 					threads.Try(
 						func() {
 							handle.HttpDirectCall(req, resp)
