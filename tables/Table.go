@@ -25,11 +25,11 @@ func LoadTables(dir string, conf *config.TableConfig) {
 	}
 
 	prefix := "wx_"
-	if conf.Prefix != "" {
+	if conf != nil && conf.Prefix != "" {
 		prefix = conf.Prefix
 	}
 	suffix := ".json"
-	if conf.Suffix != "" {
+	if conf != nil && conf.Suffix != "" {
 		suffix = conf.Suffix
 	}
 
