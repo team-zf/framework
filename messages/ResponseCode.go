@@ -14,6 +14,7 @@ const (
 const (
 	RC_Success         uint32 = 200 // 成功
 	RC_User_STATUS_NOT uint32 = 201 // 用户状态错误
+	RC_NoPermission    uint32 = 202 // 没有权限
 )
 
 const (

@@ -1,4 +1,4 @@
-package modules
+package DB
 
 import (
 	"context"
@@ -8,12 +8,15 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/team-zf/framework/logger"
 	"github.com/team-zf/framework/messages"
+	"github.com/team-zf/framework/modules"
 	"github.com/team-zf/framework/utils/threads"
+	"runtime"
 	"sync/atomic"
 	"time"
 )
 
 type DataBaseModule struct {
+	name      string
 	dsn       string
 	db        *sql.DB
 	chanNum   int                              // 通道缓存空间
@@ -43,7 +46,8 @@ func (e *DataBaseModule) Init() {
 
 func (e *DataBaseModule) Start() {
 	e.thgo.Go(func(ctx context.Context) {
-		logger.Notice("DataBase Module Start.")
+		logger.Notice("%s启动", e.name)
+		e.Handle()
 	})
 }
 
@@ -51,18 +55,19 @@ func (e *DataBaseModule) Stop() {
 	close(e.chanList)
 	e.db.Close()
 	e.thgo.CloseWait()
-	logger.Notice("DataBase Module Stop.")
+	logger.Notice("%s已停止", e.name)
 }
 
 func (e *DataBaseModule) PrintStatus() string {
 	return fmt.Sprintf(
-		"\r\n\t\tDataBase Module\t:%d/%d/%d\t(logic/get/save)",
+		"\r\n\t\t%s的状态:\t%d/%d/%d\t(Logic/Save/Request)",
+		e.name,
 		len(e.logicList),
-		atomic.LoadInt64(&e.getNum),
-		atomic.LoadInt64(&e.saveNum))
+		atomic.LoadInt64(&e.saveNum),
+		atomic.LoadInt64(&e.getNum))
 }
 
-func (e *DataBaseModule) Handle(ctx context.Context) {
+func (e *DataBaseModule) Handle() {
 	t := time.NewTicker(1 * time.Second)
 	defer t.Stop()
 	loop := 0
@@ -82,7 +87,11 @@ func (e *DataBaseModule) Handle(ctx context.Context) {
 			lth, ok := e.logicList[upmd.DBThreadID()]
 			if !ok {
 				// 新开一个协程
-				lth = NewDataBaseThread()
+				lth = NewDataBaseThread(
+					upmd.DBThreadID(),
+					e.chanNum,
+					e.db,
+				)
 				e.logicList[lth.DBThreadID] = lth
 				e.keyList = append(e.keyList, lth.DBThreadID)
 				lth.Start(e)
@@ -127,14 +136,13 @@ func (e *DataBaseModule) Exec(query string, args ...interface{}) (sql.Result, er
 	return e.db.Exec(query, args...)
 }
 
-func NewDataBaseModule(opts ...ModOptions) *DataBaseModule {
+func NewDataBaseModule(opts ...modules.ModOptions) *DataBaseModule {
 	result := &DataBaseModule{
+		name:      "DataBase",
 		chanNum:   1024,
 		timeout:   2 * time.Minute,
-		logicList: make(map[int]*DataBaseThread, 1),
+		logicList: make(map[int]*DataBaseThread, runtime.NumCPU()*10),
 		keyList:   make([]int, 0),
-		getNum:    0,
-		saveNum:   0,
 		thgo:      threads.NewThreadGo(),
 	}
 	for _, opt := range opts {
@@ -143,8 +151,14 @@ func NewDataBaseModule(opts ...ModOptions) *DataBaseModule {
 	return result
 }
 
-func DataBaseSetDsn(v string) ModOptions {
-	return func(mod IModule) {
+func DataBaseSetName(v string) modules.ModOptions {
+	return func(mod modules.IModule) {
+		mod.(*DataBaseModule).name = v
+	}
+}
+
+func DataBaseSetDsn(v string) modules.ModOptions {
+	return func(mod modules.IModule) {
 		mod.(*DataBaseModule).dsn = v
 	}
 }
@@ -172,6 +186,42 @@ func (e *DataBaseThread) Stop() {
 }
 
 func (e *DataBaseThread) Handle(ctx context.Context, mod *DataBaseModule) {
+	tk := time.NewTimer(time.Second)
+	defer tk.Stop()
+	isruned := false
+trheadhandle:
+	for {
+		select {
+		case msg, ok := <-e.chanList:
+			{
+				if !ok {
+					e.Save()
+					atomic.AddInt64(&mod.saveNum, 1)
+					break trheadhandle
+				}
+				if len(msg) == 0 {
+					continue
+				}
+				for _, data := range msg {
+					e.upDataList[data.GetDataKey()] = data
+				}
+				if isruned {
+					tk.Reset(time.Second)
+					isruned = false
+				}
+
+			}
+		case <-tk.C:
+			{
+				if len(e.upDataList) > 0 {
+					e.Save()
+					atomic.AddInt64(&mod.saveNum, 1)
+					e.upDataList = make(map[string]messages.IDataBaseMessage)
+				}
+				isruned = true
+			}
+		}
+	}
 }
 
 func (e *DataBaseThread) AddMsg(msgs []messages.IDataBaseMessage) {
@@ -180,7 +230,7 @@ func (e *DataBaseThread) AddMsg(msgs []messages.IDataBaseMessage) {
 }
 
 func (e *DataBaseThread) Save() {
-	if tx, err := e.Conndb.Begin(); err != nil {
+	if tx, err := e.Conndb.Begin(); err == nil {
 		threads.Try(
 			func() {
 				for _, data := range e.upDataList {
@@ -202,6 +252,11 @@ func (e *DataBaseThread) GetMsgNum() int {
 	return len(e.chanList) + len(e.upDataList)
 }
 
-func NewDataBaseThread() *DataBaseThread {
-	return &DataBaseThread{}
+func NewDataBaseThread(id, channum int, db *sql.DB) *DataBaseThread {
+	return &DataBaseThread{
+		DBThreadID: id,
+		upDataList: make(map[string]messages.IDataBaseMessage),
+		chanList:   make(chan []messages.IDataBaseMessage, channum),
+		Conndb:     db,
+	}
 }

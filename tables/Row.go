@@ -11,6 +11,10 @@ func NewRow() *Row {
 	return nil
 }
 
+func (e *Row) GetKey() int {
+	return e.key
+}
+
 func (e *Row) GetDataToString(name string) string {
 	if e.items[name] == nil {
 		return ""

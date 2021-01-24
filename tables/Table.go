@@ -46,7 +46,7 @@ func LoadTables(dir string, conf *config.TableConfig) {
 			name := fileName.Substr(x, y).ToString()
 			table, _ := loadTableFile(path.Join(dir, file.Name()))
 			tables[name] = table
-			logger.Notice("File: %s; Key: %s", file.Name(), name)
+			logger.Notice("File: %s; key: %s", file.Name(), name)
 		}
 	}
 	logger.Notice("数据表载入完成.")

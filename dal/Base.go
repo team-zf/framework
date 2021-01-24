@@ -17,14 +17,14 @@ type IConnDB interface {
 }
 
 // 生成Insert&Update语句, SQL
-func MarshalModSql(o interface{}, table string) string {
+func MarshalModSql(o ITable) string {
 	t := reflect.TypeOf(o)
 	fields := t.Elem()
 	fieldNum := fields.NumField()
 
 	result := utils.NewStringBuilderCap(fieldNum*40 + 60)
 	result.Append("insert into ")
-	result.Append(table)
+	result.Append(o.GetTableName())
 	result.Append("(")
 
 	insetTemp := utils.NewStringBuilderCap(fieldNum * 10)
@@ -36,23 +36,21 @@ FieldFor:
 		tag := field.Tag.Get("db")
 		titles := strings.Split(tag, ",")
 		name := field.Name
-		isKey := false
+		needMod := true
+
+		if tag == "" {
+			continue
+		}
+
 		// 遍历所有标题
 		for _, v := range titles {
 			switch v {
-			case "!mod":
-				{
-					isKey = true
-				}
-			case "get":
-			case "-":
-				{
-					continue FieldFor
-				}
+			case "!mod", "pk":
+				needMod = false
+			case "!":
+				continue FieldFor
 			default:
-				{
-					name = v
-				}
+				name = v
 			}
 		}
 		// 非首位补逗号分隔
@@ -63,7 +61,7 @@ FieldFor:
 		result.Append(name)
 		insetTemp.Append("?")
 		// 加入非主键的字段
-		if !isKey {
+		if needMod {
 			// 非首位补逗号分隔
 			if !updateTemp.IsEmpty() {
 				updateTemp.Append(",")
@@ -84,7 +82,7 @@ FieldFor:
 }
 
 // 生成Delete语句, SQL
-func MarshalDelSql(o interface{}, table string, args ...interface{}) string {
+func MarshalDelSql(o ITable, wheres ...string) string {
 	t := reflect.TypeOf(o)
 	fields := t.Elem()
 	fieldNum := fields.NumField()
@@ -93,15 +91,15 @@ func MarshalDelSql(o interface{}, table string, args ...interface{}) string {
 	where := utils.NewStringBuilderCap(30)
 
 	result.Append("delete from ")
-	result.Append(table)
+	result.Append(o.GetTableName())
 
 	// 自定义条件
-	if len(args) > 0 {
-		for _, v := range args {
+	if len(wheres) > 0 {
+		for _, v := range wheres {
 			if !where.IsEmpty() {
 				where.Append(" and ")
 			}
-			where.Append(utils.NewStringAny(v).ToString())
+			where.Append(v)
 			where.Append("=?")
 		}
 	}
@@ -134,7 +132,6 @@ FieldFor:
 		tag := field.Tag.Get("db")
 		titles := strings.Split(tag, ",")
 		name := field.Name
-		isWhere := false
 
 		if tag == "" {
 			continue
@@ -144,9 +141,7 @@ FieldFor:
 			switch v {
 			case "!mod":
 				continue
-			case "get":
-				isWhere = true
-			case "-":
+			case "!":
 				continue FieldFor
 			default:
 				if name == field.Name {
@@ -160,14 +155,6 @@ FieldFor:
 			isColumn = true
 		}
 		result.Append(name)
-
-		if isWhere && len(wheres) == 0 {
-			if !where.IsEmpty() {
-				where.Append(" and ")
-			}
-			where.Append(name)
-			where.Append("=?")
-		}
 	}
 
 	result.Append(" from ")

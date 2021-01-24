@@ -38,6 +38,12 @@ type IDataBaseModule interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
+type IWebSocketModule interface {
+	IModule
+	SetRoute(cmd uint32, msg interface{})
+	GetRoute(cmd uint32) (msg interface{}, err error)
+}
+
 type AppOptions func(app IApp)
 
 type ModOptions func(mod IModule)

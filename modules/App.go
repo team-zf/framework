@@ -51,7 +51,7 @@ func (e *App) Init() IApp {
 		utils.Mkdir(e.logDir)
 	}
 	e.loadConfig()
-	e.loadTables()
+	//e.loadTables()
 	return e
 }
 

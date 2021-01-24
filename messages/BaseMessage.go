@@ -2,7 +2,6 @@ package messages
 
 import (
 	"github.com/team-zf/framework/dal"
-	"github.com/team-zf/framework/model"
 	"net/http"
 )
 
@@ -32,14 +31,6 @@ type IHttpMessageHandle interface {
 	Parse()
 	// HTTP的回调
 	HttpDirectCall(req *http.Request, resp *HttpResponse)
-}
-
-type IWebSocketMessageHandle interface {
-	IMessage
-	// 解析参数
-	Parse()
-	// WebSocket的回调
-	WebSocketDirectCall(wsmd *model.WebSocketModel, resp *WebSocketResponse)
 }
 
 type IDataBaseMessage interface {
