@@ -86,6 +86,10 @@ func (e *WebSocketDDM) __JoinMod(a *WebSocketDDM, b *WebSocketDDM) {
 	for key, m := range b._Mod {
 		rule := b._Rules[key]
 
+		if a._Mod == nil {
+			a._Mod = make(map[string]interface{})
+		}
+
 		if a._Mod[key] == nil {
 			a._Mod[key] = make(map[string]interface{})
 		}
@@ -104,6 +108,10 @@ func (e *WebSocketDDM) __JoinMod(a *WebSocketDDM, b *WebSocketDDM) {
 
 func (e *WebSocketDDM) __JoinDel(a *WebSocketDDM, b *WebSocketDDM) {
 	for key, m := range b._Del {
+		if a._Del == nil {
+			a._Del = make(map[string]interface{})
+		}
+
 		if a._Del[key] == nil {
 			a._Del[key] = make([]int, 0)
 		}

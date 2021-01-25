@@ -187,6 +187,7 @@ func (e *WebSocketModule) TryDirectCall(route IWebSocketRoute, agent *WebSocketA
 				agent.SendData(jsmap)
 			}, func(err error) {
 				result = false
+				logger.Error("%s逻辑错误, Error: %+v", e.name, err)
 				// 返回逻辑错误
 				agent.SendData(&WebSocketResponse{
 					Cmd:  route.GetCmd(),
