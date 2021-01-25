@@ -61,7 +61,7 @@ func (e *HttpModule) Stop() {
 
 func (e *HttpModule) PrintStatus() string {
 	return fmt.Sprintf(
-		"\r\n\t\t%s的状态:\t%d/%d/%d\t(Runing/Request)",
+		"\r\n\t\t%s的状态:\t%d/%d\t(Runing/Request)",
 		e.name,
 		atomic.LoadInt64(&e.runingCount),
 		atomic.LoadInt64(&e.requestCount))
