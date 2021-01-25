@@ -37,6 +37,7 @@ func (e *DataBaseModule) Init() {
 	}
 	e.db = db
 	e.chanList = make(chan []IDataBaseMessage, 1024)
+	e.cacheList = make(map[string]IDataBaseMessage)
 }
 
 func (e *DataBaseModule) Start() {
