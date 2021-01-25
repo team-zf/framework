@@ -2,6 +2,7 @@ package Network
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/team-zf/framework/logger"
 	"github.com/team-zf/framework/messages"
@@ -116,7 +117,15 @@ func (e *HttpModule) TryDirectCall(route IHttpRoute, res http.ResponseWriter, re
 								resp := &HttpResponse{
 									Code: code,
 								}
-								if data, err := e.routeHandle.Marshal(resp); err == nil {
+								buff, _ := json.Marshal(resp)
+								jsmap := make(map[string]interface{})
+								json.Unmarshal(buff, &jsmap)
+								for k, v := range route.ToJsonMap() {
+									if _, ok := jsmap[k]; !ok {
+										jsmap[k] = v
+									}
+								}
+								if data, err := e.routeHandle.Marshal(jsmap); err == nil {
 									res.Write(data)
 								}
 							},
