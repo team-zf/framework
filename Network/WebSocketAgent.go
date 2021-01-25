@@ -4,11 +4,11 @@ import "golang.org/x/net/websocket"
 
 type WebSocketAgent struct {
 	Conn        *websocket.Conn
-	routeHandle *WebSocketRouteHandle
+	RouteHandle *WebSocketRouteHandle
 }
 
 func (e *WebSocketAgent) SendData(data interface{}) error {
-	buff, err := e.routeHandle.Marshal(data)
+	buff, err := e.RouteHandle.Marshal(data)
 	if err != nil {
 		return err
 	}

@@ -153,6 +153,10 @@ func (e *App) GetConfig() *config.AppConfig {
 	return e.config
 }
 
+func (e *App) Debug() bool {
+	return e.debug
+}
+
 func NewApp(opts ...AppOptions) *App {
 	result := &App{
 		PStatusTime: 10 * time.Second,

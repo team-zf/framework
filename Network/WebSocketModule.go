@@ -81,6 +81,7 @@ func (e *WebSocketModule) Handle(conn *websocket.Conn) {
 
 	agent := new(WebSocketAgent)
 	agent.Conn = conn
+	agent.RouteHandle = e.routeHandle
 
 	// 心跳检测机制
 	heartbeat := make(chan bool, 8)
@@ -93,7 +94,8 @@ func (e *WebSocketModule) Handle(conn *websocket.Conn) {
 			case <-ctx.Done():
 				return
 			case <-timeout.C:
-				return
+				timeout.Reset(HEARTBEAT_TIMEOUT)
+				//return
 			case reset := <-heartbeat:
 				if reset {
 					timeout.Reset(HEARTBEAT_TIMEOUT)

@@ -73,8 +73,8 @@ func (e *HttpModule) Handle(res http.ResponseWriter, req *http.Request) {
 	e.thgo.Wg.Add(1)
 	defer e.thgo.Wg.Done()
 
-	bytes, _ := ioutil.ReadAll(req.Body)
-	msg, err := e.routeHandle.Unmarshal(bytes)
+	buff, _ := ioutil.ReadAll(req.Body)
+	msg, err := e.routeHandle.Unmarshal(buff)
 	if err != nil {
 		logger.Error("%s消息解码失败, 原因: %+v", e.name, err)
 		return
@@ -99,8 +99,8 @@ func (e *HttpModule) TryDirectCall(route IHttpRoute, res http.ResponseWriter, re
 				resp := &HttpResponse{
 					Code: messages.RC_Param_Error,
 				}
-				if bytes, err := e.routeHandle.Marshal(resp); err == nil {
-					res.Write(bytes)
+				if buff, err := e.routeHandle.Marshal(resp); err == nil {
+					res.Write(buff)
 				}
 			})
 			return result
@@ -125,8 +125,8 @@ func (e *HttpModule) TryDirectCall(route IHttpRoute, res http.ResponseWriter, re
 										jsmap[k] = v
 									}
 								}
-								if data, err := e.routeHandle.Marshal(jsmap); err == nil {
-									res.Write(data)
+								if buff, err := e.routeHandle.Marshal(jsmap); err == nil {
+									res.Write(buff)
 								}
 							},
 							func(err error) {
@@ -135,8 +135,8 @@ func (e *HttpModule) TryDirectCall(route IHttpRoute, res http.ResponseWriter, re
 									Code: messages.RC_LOGIC_ERROR,
 								}
 								// 返回逻辑错误
-								if data, err := e.routeHandle.Marshal(resp); err == nil {
-									res.Write(data)
+								if buff, err := e.routeHandle.Marshal(resp); err == nil {
+									res.Write(buff)
 								}
 							},
 						)
@@ -161,8 +161,8 @@ func (e *HttpModule) TryDirectCall(route IHttpRoute, res http.ResponseWriter, re
 					resp := &HttpResponse{
 						Code: messages.RC_Param_Error,
 					}
-					if bytes, err := e.routeHandle.Marshal(resp); err == nil {
-						res.Write(bytes)
+					if buff, err := e.routeHandle.Marshal(resp); err == nil {
+						res.Write(buff)
 					}
 				},
 			)

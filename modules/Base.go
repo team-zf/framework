@@ -27,6 +27,7 @@ type IApp interface {
 	OnStartup(fn func(app IApp))
 	OnStoped(fn func(app IApp))
 	GetConfig() *config.AppConfig
+	Debug() bool
 }
 
 type IDataBaseModule interface {
