@@ -21,7 +21,7 @@ type DataBaseModule struct {
 	db        *sql.DB
 	chanNum   int                              // 通道缓存空间
 	timeout   time.Duration                    // 超时时长
-	logicList map[int]*DataBaseThread          //子逻辑列表
+	logicList map[int]*DataBaseThread          // 子逻辑列表
 	keyList   []int                            // Key列表, 用来间隔遍历
 	chanList  chan []messages.IDataBaseMessage // 消息信通
 	getNum    int64                            // 收到的总消息数
@@ -164,12 +164,12 @@ func DataBaseSetDsn(v string) modules.ModOptions {
 }
 
 type DataBaseThread struct {
-	DBThreadID int                                  //协程ID
-	upDataList map[string]messages.IDataBaseMessage //缓存要更新的数据
-	chanList   chan []messages.IDataBaseMessage     //收要更新的数据
-	Conndb     *sql.DB                              //数据库连接对象
-	upTime     time.Time                            //更新时间
-	cancel     context.CancelFunc                   //关闭
+	DBThreadID int                                  // 协程ID
+	upDataList map[string]messages.IDataBaseMessage // 缓存要更新的数据
+	chanList   chan []messages.IDataBaseMessage     // 收要更新的数据
+	Conndb     *sql.DB                              // 数据库连接对象
+	upTime     time.Time                            // 更新时间
+	cancel     context.CancelFunc                   // 关闭
 }
 
 func (e *DataBaseThread) Start(mod *DataBaseModule) {
