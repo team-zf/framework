@@ -7,26 +7,21 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/team-zf/framework/logger"
-	"github.com/team-zf/framework/messages"
 	"github.com/team-zf/framework/modules"
 	"github.com/team-zf/framework/utils/threads"
-	"runtime"
 	"sync/atomic"
 	"time"
 )
 
 type DataBaseModule struct {
-	name      string
-	dsn       string
-	db        *sql.DB
-	chanNum   int                              // 通道缓存空间
-	timeout   time.Duration                    // 超时时长
-	logicList map[int]*DataBaseThread          // 子逻辑列表
-	keyList   []int                            // Key列表, 用来间隔遍历
-	chanList  chan []messages.IDataBaseMessage // 消息信通
-	getNum    int64                            // 收到的总消息数
-	saveNum   int64                            // 保存次数
-	thgo      *threads.ThreadGo                // 子协程管理
+	name         string
+	dsn          string
+	db           *sql.DB
+	thgo         *threads.ThreadGo
+	chanList     chan []IDataBaseMessage     // 消息信通
+	cacheList    map[string]IDataBaseMessage // 缓存要更新的数据
+	requestCount int64                       // 收到的请求总数
+	saveCount    int64                       // 保存的总数
 }
 
 func (e *DataBaseModule) Init() {
@@ -41,7 +36,7 @@ func (e *DataBaseModule) Init() {
 		panic(fmt.Sprintf("Mysql尝Ping失败, 错误原因: %+v", err))
 	}
 	e.db = db
-	e.chanList = make(chan []messages.IDataBaseMessage, e.chanNum)
+	e.chanList = make(chan []IDataBaseMessage, 1024)
 }
 
 func (e *DataBaseModule) Start() {
@@ -60,64 +55,64 @@ func (e *DataBaseModule) Stop() {
 
 func (e *DataBaseModule) PrintStatus() string {
 	return fmt.Sprintf(
-		"\r\n\t\t%s的状态:\t%d/%d/%d\t(Logic/Save/Request)",
+		"\r\n\t\t%s的状态:\t%d/%d/%d\t(Cache/Save/Request)",
 		e.name,
-		len(e.logicList),
-		atomic.LoadInt64(&e.saveNum),
-		atomic.LoadInt64(&e.getNum))
+		len(e.cacheList),
+		atomic.LoadInt64(&e.saveCount),
+		atomic.LoadInt64(&e.requestCount))
 }
 
 func (e *DataBaseModule) Handle() {
-	t := time.NewTicker(1 * time.Second)
+	t := time.NewTicker(time.Second)
 	defer t.Stop()
-	loop := 0
 	for {
 		select {
 		case msgs, ok := <-e.chanList:
-			if !ok {
-				for _, lth := range e.logicList {
-					lth.Stop()
+			if ok {
+				for _, msg := range msgs {
+					e.cacheList[msg.GetDataKey()] = msg
 				}
+			} else {
+				e.Save()
 				return
 			}
-			if len(msgs) == 0 {
-				continue
-			}
-			upmd := msgs[0]
-			lth, ok := e.logicList[upmd.DBThreadID()]
-			if !ok {
-				// 新开一个协程
-				lth = NewDataBaseThread(
-					upmd.DBThreadID(),
-					e.chanNum,
-					e.db,
-				)
-				e.logicList[lth.DBThreadID] = lth
-				e.keyList = append(e.keyList, lth.DBThreadID)
-				lth.Start(e)
-			}
-			lth.AddMsg(msgs)
 		case <-t.C:
-			if len(e.keyList) == 0 {
-				continue
-			}
-			loop = loop % len(e.keyList)
-			keyid := e.keyList[loop]
-			if lth, ok := e.logicList[keyid]; ok {
-				if lth.GetMsgNum() == 0 && time.Now().Sub(lth.upTime) > e.timeout {
-					lth.Stop()
-					delete(e.logicList, keyid)
-					e.keyList = append(e.keyList[:loop], e.keyList[loop+1:]...)
-				}
-			}
-			loop++
+			e.Save()
 		}
 	}
 }
 
-func (e *DataBaseModule) AddMsg(msgs ...messages.IDataBaseMessage) {
-	atomic.AddInt64(&e.getNum, 1)
-	e.chanList <- msgs
+func (e *DataBaseModule) Save() {
+	if len(e.cacheList) == 0 {
+		return
+	}
+
+	atomic.AddInt64(&e.saveCount, 1)
+	if tx, err := e.db.Begin(); err == nil {
+		threads.Try(
+			func() {
+				for _, msg := range e.cacheList {
+					if err = msg.SaveDB(tx); err != nil {
+						str := fmt.Sprintf("DataKey: %s; Error: %+v", msg.GetDataKey(), err)
+						panic(errors.New(str))
+					}
+				}
+				tx.Commit()
+			},
+			func(err error) {
+				tx.Rollback()
+				logger.Error(err.Error())
+			},
+		)
+	}
+	e.cacheList = make(map[string]IDataBaseMessage)
+}
+
+func (e *DataBaseModule) AddMsg(msgs ...IDataBaseMessage) {
+	if len(msgs) > 0 {
+		atomic.AddInt64(&e.requestCount, 1)
+		e.chanList <- msgs
+	}
 }
 
 func (e *DataBaseModule) GetDB() *sql.DB {
@@ -138,12 +133,8 @@ func (e *DataBaseModule) Exec(query string, args ...interface{}) (sql.Result, er
 
 func NewDataBaseModule(opts ...modules.ModOptions) *DataBaseModule {
 	result := &DataBaseModule{
-		name:      "DataBase",
-		chanNum:   1024,
-		timeout:   2 * time.Minute,
-		logicList: make(map[int]*DataBaseThread, runtime.NumCPU()*10),
-		keyList:   make([]int, 0),
-		thgo:      threads.NewThreadGo(),
+		name: "DataBase",
+		thgo: threads.NewThreadGo(),
 	}
 	for _, opt := range opts {
 		opt(result)
@@ -160,103 +151,5 @@ func DataBaseSetName(v string) modules.ModOptions {
 func DataBaseSetDsn(v string) modules.ModOptions {
 	return func(mod modules.IModule) {
 		mod.(*DataBaseModule).dsn = v
-	}
-}
-
-type DataBaseThread struct {
-	DBThreadID int                                  // 协程ID
-	upDataList map[string]messages.IDataBaseMessage // 缓存要更新的数据
-	chanList   chan []messages.IDataBaseMessage     // 收要更新的数据
-	Conndb     *sql.DB                              // 数据库连接对象
-	upTime     time.Time                            // 更新时间
-	cancel     context.CancelFunc                   // 关闭
-}
-
-func (e *DataBaseThread) Start(mod *DataBaseModule) {
-	e.cancel = mod.thgo.SubGo(
-		func(ctx context.Context) {
-			e.Handle(ctx, mod)
-		},
-	)
-}
-
-func (e *DataBaseThread) Stop() {
-	e.cancel()
-	close(e.chanList)
-}
-
-func (e *DataBaseThread) Handle(ctx context.Context, mod *DataBaseModule) {
-	tk := time.NewTimer(time.Second)
-	defer tk.Stop()
-	isruned := false
-trheadhandle:
-	for {
-		select {
-		case msg, ok := <-e.chanList:
-			{
-				if !ok {
-					e.Save()
-					atomic.AddInt64(&mod.saveNum, 1)
-					break trheadhandle
-				}
-				if len(msg) == 0 {
-					continue
-				}
-				for _, data := range msg {
-					e.upDataList[data.GetDataKey()] = data
-				}
-				if isruned {
-					tk.Reset(time.Second)
-					isruned = false
-				}
-
-			}
-		case <-tk.C:
-			{
-				if len(e.upDataList) > 0 {
-					e.Save()
-					atomic.AddInt64(&mod.saveNum, 1)
-					e.upDataList = make(map[string]messages.IDataBaseMessage)
-				}
-				isruned = true
-			}
-		}
-	}
-}
-
-func (e *DataBaseThread) AddMsg(msgs []messages.IDataBaseMessage) {
-	e.upTime = time.Now()
-	e.chanList <- msgs
-}
-
-func (e *DataBaseThread) Save() {
-	if tx, err := e.Conndb.Begin(); err == nil {
-		threads.Try(
-			func() {
-				for _, data := range e.upDataList {
-					if err = data.SaveDB(tx); err != nil {
-						panic(errors.New(fmt.Sprintf("keyid: %d; DataKey: %s", data.DBThreadID(), data.GetDataKey())))
-					}
-				}
-				tx.Commit()
-			},
-			func(err error) {
-				tx.Rollback()
-				logger.Error(err.Error())
-			},
-		)
-	}
-}
-
-func (e *DataBaseThread) GetMsgNum() int {
-	return len(e.chanList) + len(e.upDataList)
-}
-
-func NewDataBaseThread(id, channum int, db *sql.DB) *DataBaseThread {
-	return &DataBaseThread{
-		DBThreadID: id,
-		upDataList: make(map[string]messages.IDataBaseMessage),
-		chanList:   make(chan []messages.IDataBaseMessage, channum),
-		Conndb:     db,
 	}
 }
