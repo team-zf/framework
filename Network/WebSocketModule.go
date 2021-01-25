@@ -27,10 +27,10 @@ type WebSocketModule struct {
 	addr         string
 	httpServer   *http.Server
 	routeHandle  *WebSocketRouteHandle
-	thgo         *threads.ThreadGo // 协程管理器
-	requestCount int64             // 收到的请求总数
-	runingCount  int64             // 正在运行的总数
-	onlineCount  int64             // 在线总人数
+	thgo         *threads.ThreadGo
+	requestCount int64 // 收到的请求总数
+	runingCount  int64 // 正在运行的总数
+	onlineCount  int64 // 在线总人数
 }
 
 func (e *WebSocketModule) Init() {

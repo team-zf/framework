@@ -2,36 +2,7 @@ package messages
 
 import (
 	"github.com/team-zf/framework/dal"
-	"net/http"
 )
-
-// 消息收发接口
-type IMessageHandle interface {
-	// 编码
-	Marshal(data interface{}) ([]byte, error)
-	// 解码
-	Unmarshal(buff []byte) (data interface{}, err error)
-	// 设置消息路由
-	SetRoute(cmd uint32, msg interface{})
-	// 按消息拿出消息处理实例
-	GetRoute(cmd uint32) (result interface{}, err error)
-	// 一个消息是否收完了
-	// 返回这个消息应该的长度，和是否收完的信息
-	CheckMaxLenVaild(buff []byte) (msglen uint32, ok bool)
-}
-
-type IMessage interface {
-	GetCmd() uint32
-	Header() string
-}
-
-type IHttpMessageHandle interface {
-	IMessage
-	// 解析参数
-	Parse()
-	// HTTP的回调
-	HttpDirectCall(req *http.Request, resp *HttpResponse)
-}
 
 type IDataBaseMessage interface {
 	// 所在DB协程
