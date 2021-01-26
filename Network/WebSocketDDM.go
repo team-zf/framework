@@ -89,6 +89,9 @@ func (e *WebSocketDDM) __JoinMod(a *WebSocketDDM, b *WebSocketDDM) {
 		if a._Mod == nil {
 			a._Mod = make(map[string]interface{})
 		}
+		if a._Rules == nil {
+			a._Rules = make(map[string][]string)
+		}
 
 		if a._Mod[key] == nil {
 			a._Mod[key] = make(map[string]interface{})
@@ -103,6 +106,7 @@ func (e *WebSocketDDM) __JoinMod(a *WebSocketDDM, b *WebSocketDDM) {
 		} else {
 			a._Mod[key] = m
 		}
+		a._Rules[key] = rule
 	}
 }
 
