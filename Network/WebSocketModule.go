@@ -13,6 +13,8 @@ import (
 	"golang.org/x/net/websocket"
 	"io"
 	"net/http"
+	"runtime/debug"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -187,7 +189,9 @@ func (e *WebSocketModule) TryDirectCall(route IWebSocketRoute, agent *WebSocketA
 				agent.SendData(jsmap)
 			}, func(err error) {
 				result = false
-				logger.Error("%s逻辑错误, Error: %+v", e.name, err)
+				stacks := strings.Split(string(debug.Stack()), "\n")
+				stacks = append(stacks[9 : len(stacks)-(35)])
+				logger.Error("%s逻辑错误\nError: %s\nStack:\n%s\n", e.name, err.Error(), strings.Join(stacks, "\n"))
 				// 返回逻辑错误
 				agent.SendData(&WebSocketResponse{
 					Cmd:  route.GetCmd(),
