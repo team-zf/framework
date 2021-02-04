@@ -9,6 +9,7 @@ import (
 	"github.com/team-zf/framework/utils"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -34,6 +35,7 @@ func (e *App) Init() IApp {
 		confPath := flag.String("c", "", "配置文件路径")
 		logDir := flag.String("l", "", "日志文件目录")
 		tableDir := flag.String("t", "", "数据表目录")
+		debug := flag.String("d", "", "是否启动调试模式")
 		flag.Parse()
 
 		if confPath != nil && *confPath != "" {
@@ -44,6 +46,9 @@ func (e *App) Init() IApp {
 		}
 		if tableDir != nil && *tableDir != "" {
 			e.tableDir = *tableDir
+		}
+		if debug != nil && *debug != "" {
+			e.debug = strings.ToLower(*debug) == "true"
 		}
 	}
 

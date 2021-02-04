@@ -9,12 +9,16 @@ type List struct {
 	items []interface{}
 }
 
+func (e *List) Empty() bool {
+	return len(e.items) == 0
+}
+
 func (e *List) At(idx int) interface{} {
 	return e.items[idx]
 }
 
 func (e *List) Rnd() interface{} {
-	return e.items[utils.Range(len(e.items))]
+	return e.items[utils.Range(len(e.items)-1)]
 }
 
 func (e *List) ToIntArray() ([]int, error) {
